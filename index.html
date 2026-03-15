@@ -31,6 +31,10 @@ body::before {
   border-radius:22px; overflow:hidden;
   box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(74,179,212,.2);
 }
+@media (max-width:700px) {
+  body { align-items:flex-start; padding:0; min-height:100vh; }
+  .app { height:100dvh; max-height:none; border-radius:0; }
+}
 
 /* ── HEADER ── */
 .header {
@@ -253,10 +257,11 @@ body::before {
   .inner-tabs { display:flex; }
   .form-side { 
     width:100%; border-left:none; border-bottom:1px solid rgba(74,179,212,.15);
-    display:none; flex:1; overflow-y:auto;
+    display:none; flex:1; overflow-y:auto; min-height:0;
   }
-  .form-side.mobile-active { display:block; }
-  .chat-side { display:flex; }
+  .form-side.mobile-active { display:flex; flex-direction:column; }
+  .chat-side { display:flex; flex:1; min-height:0; }
+  .chat-msgs { flex:1; min-height:0; overflow-y:auto; }
   .header-sub { display:none; }
   .bbl { max-width:92%; font-size:12.5px; }
 }
