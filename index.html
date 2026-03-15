@@ -684,7 +684,7 @@ function removeTypingBubble() {
 async function callClaude(userText, fromForm = false) {
   isTyping = true;
   document.getElementById('sendBtn').disabled = true;
-  const GEMINI_KEY = 'AIzaSyDPS8zLmEnFZhgVikn6E2ohWO7s2oXFHOQ';
+  const GEMINI_KEY = AIzaSyA_YOXHQReIptbK6nvLHVjqCclxKQbEYcM
   try {
     // بناء تاريخ المحادثة بصيغة Gemini
     const geminiHistory = chatHistory.slice(0, -1).map(m => ({
