@@ -296,13 +296,7 @@ body::before {
   </div>
 
   <!-- TABS -->
-  <div id="installBanner" style="background:linear-gradient(135deg,rgba(74,179,212,.2),rgba(45,122,58,.2));border-bottom:1px solid rgba(74,179,212,.3);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-  <span style="color:var(--water-light);font-size:12px;font-weight:700;">📲 ثبّت التطبيق على جهازك</span>
-  <div style="display:flex;gap:8px;">
-    <button onclick="installApp()" style="background:var(--water);border:none;border-radius:8px;padding:6px 14px;color:white;font-family:Cairo,sans-serif;font-weight:700;font-size:12px;cursor:pointer;">تثبيت</button>
-    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;padding:6px 10px;color:rgba(255,255,255,.6);font-size:12px;cursor:pointer;">✕</button>
-  </div>
-</div>
+  
 <div class="tabs">
     <div class="tab active" onclick="showTab('main')" id="tab-main">💬 الشكوى والمحادثة</div>
     <div class="tab" onclick="showTab('log')" id="tab-log">📋 سجل الشكاوى <span id="badge" style="background:var(--water);color:white;border-radius:10px;padding:1px 7px;font-size:10px;margin-right:4px;display:none"></span></div>
@@ -1092,5 +1086,8 @@ function installApp() {
   }
 }
 </script>
+<button onclick="installApp()" id="fabInstall" style="position:fixed;bottom:80px;left:16px;z-index:9999;background:linear-gradient(135deg,#1a4a6b,#4ab3d4);border:none;border-radius:50px;padding:10px 18px;color:white;font-family:Cairo,sans-serif;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 20px rgba(74,179,212,.5);display:flex;align-items:center;gap:6px;">
+  📲 ثبّت التطبيق
+</button>
 </body>
 </html>
