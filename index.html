@@ -409,6 +409,19 @@ body::before {
   <!-- PANEL 3: SETUP -->
   <div class="panel setup-panel" id="panel-setup">
     <div class="setup-card">
+      <h3>🤖 إعدادات المساعد الذكي (Claude AI)</h3>
+      <div class="info-box" style="margin-bottom:14px">
+        عشان المساعد الذكي يشتغل، محتاج Claude API Key من Anthropic.<br>
+        روح على <b>console.anthropic.com</b> ← API Keys ← Create Key
+      </div>
+      <div class="setup-field">
+        <label>Claude API Key</label>
+        <input type="password" id="claude-key" placeholder="sk-ant-api03-..." oninput="saveSettings()" dir="ltr">
+      </div>
+      <div id="claude-key-status" style="font-size:11.5px;margin-top:6px;color:var(--green-light)"></div>
+    </div>
+
+    <div class="setup-card">
       <h3>📱 إعدادات Telegram</h3>
       <div class="info-box" style="margin-bottom:14px">
         لما تجيب Bot Token من BotFather، حطّه هنا وهيبدأ يبعت كل شكوى تلقائياً على غرفة العمليات.
@@ -684,30 +697,40 @@ function removeTypingBubble() {
 async function callClaude(userText, fromForm = false) {
   isTyping = true;
   document.getElementById('sendBtn').disabled = true;
-  const GEMINI_KEY = 'AIzaSyADrDZxFsHsLwVBU7uJ4qyPpDXexngE2uA'؛
+  const CLAUDE_KEY = localStorage.getItem('claude_key') || '';
+  if (!CLAUDE_KEY) {
+    removeTypingBubble();
+    appendMsg('bot', '⚠️ مفيش API Key! روح الإعدادات وحط Claude API Key عشان المساعد يشتغل.');
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    return;
+  }
   try {
-    // بناء تاريخ المحادثة بصيغة Gemini
-    const geminiHistory = chatHistory.slice(0, -1).map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
+    // بناء تاريخ المحادثة بصيغة Claude
+    const claudeHistory = chatHistory.slice(0, -1).map(m => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content
     }));
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM }] },
-          contents: [
-            ...geminiHistory,
-            { role: 'user', parts: [{ text: userText }] }
-          ],
-          generationConfig: { maxOutputTokens: 400, temperature: 0.7 }
-        })
-      }
-    );
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        system: SYSTEM,
+        messages: [
+          ...claudeHistory,
+          { role: 'user', content: userText }
+        ]
+      })
+    });
     const data = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply = data.content?.[0]?.text;
     if (reply) {
       chatHistory.push({role:'assistant', content: reply});
       removeTypingBubble();
@@ -716,10 +739,10 @@ async function callClaude(userText, fromForm = false) {
       document.getElementById('sendBtn').disabled = false;
       return;
     }
-    // إظهار الخطأ من Gemini
+    // إظهار الخطأ من Claude
     removeTypingBubble();
     const errMsg = data.error?.message || JSON.stringify(data);
-    appendMsg('bot', '⚠️ خطأ Gemini: ' + errMsg);
+    appendMsg('bot', '⚠️ خطأ: ' + errMsg);
     isTyping = false;
     document.getElementById('sendBtn').disabled = false;
     return;
@@ -730,13 +753,6 @@ async function callClaude(userText, fromForm = false) {
     document.getElementById('sendBtn').disabled = false;
     return;
   }
-  // Offline fallback
-  const reply = getLocalReply(userText, fromForm);
-  chatHistory.push({role:'assistant', content: reply});
-  removeTypingBubble();
-  appendMsg('bot', reply);
-  isTyping = false;
-  document.getElementById('sendBtn').disabled = false;
 }
 
 function getLocalReply(text, fromForm) {
@@ -847,6 +863,11 @@ function saveSettings() {
   localStorage.setItem('tg_token', document.getElementById('tg-token').value);
   localStorage.setItem('tg_chat', document.getElementById('tg-chat').value);
   localStorage.setItem('wa_number', document.getElementById('wa-number').value);
+  const ck = document.getElementById('claude-key').value.trim();
+  if (ck) {
+    localStorage.setItem('claude_key', ck);
+    document.getElementById('claude-key-status').textContent = '✅ تم حفظ الـ API Key';
+  }
 }
 
 function sendWhatsApp() {
@@ -901,6 +922,11 @@ async function testTelegram() {
 // ═══════════════════════════════════════
 document.getElementById('init-time').textContent = getTime();
 updateStats();
+// Load saved Claude API Key
+const savedClaudeKey = localStorage.getItem('claude_key') || '';
+document.getElementById('claude-key').value = savedClaudeKey;
+if (savedClaudeKey) document.getElementById('claude-key-status').textContent = '✅ تم حفظ الـ API Key';
+
 // Load saved Telegram settings
 const DEFAULT_TOKEN = '8710054739:AAG9Be_m2mDtWfMrC9Fv2Sp693YVP_PFt90';
 const DEFAULT_CHAT = '1148446271';
