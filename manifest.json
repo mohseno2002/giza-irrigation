@@ -2,8 +2,8 @@
   "name": "نظام شكاوى رى الجيزة",
   "short_name": "ري الجيزة",
   "description": "نظام شكاوى ومساعد ذكي للإدارة العامة لري محافظة الجيزة",
-  "start_url": "/- /",
-  "scope": "/-/",
+  "start_url": "/giza-irrigation/",
+  "scope": "/giza-irrigation/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0d2d42",
@@ -22,13 +22,21 @@
       "type": "image/svg+xml"
     }
   ],
-  "categories": ["government", "utilities"],
+  "categories": [
+    "government",
+    "utilities"
+  ],
   "shortcuts": [
     {
       "name": "تسجيل شكوى جديدة",
       "short_name": "شكوى",
-      "url": "/-/",
-      "icons": [{ "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text y='80' font-size='80'>📝</text></svg>", "sizes": "96x96" }]
+      "url": "/giza-irrigation/",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text y='80' font-size='80'>📝</text></svg>",
+          "sizes": "96x96"
+        }
+      ]
     }
   ]
 }

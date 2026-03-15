@@ -1,7 +1,7 @@
-const CACHE_NAME = 'giza-irrigation-v1';
+const CACHE_NAME = 'giza-irrigation-v2';
 const URLS_TO_CACHE = [
-  '/-/',
-  '/-/index.html'
+  '/giza-irrigation/',
+  '/giza-irrigation/index.html'
 ];
 
 self.addEventListener('install', e => {
@@ -21,7 +21,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // للـ API calls — مش نعملهم cache
   if (e.request.url.includes('api.anthropic.com') ||
       e.request.url.includes('googleapis.com') ||
       e.request.url.includes('telegram.org')) {
