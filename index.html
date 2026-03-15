@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ري الجيزة">
+<meta name="theme-color" content="#1a4a6b">
 <title>نظام شكاوى رى الجيزة</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -279,6 +285,7 @@ body::before {
       <div class="online-dot">مساعد ذكي متاح</div>
     </div>
     <div class="header-actions">
+      <button class="hbtn" id="installBtn" onclick="installApp()" style="display:none;background:linear-gradient(135deg,rgba(74,179,212,.3),rgba(45,122,58,.3));border-color:var(--water)">📲 تثبيت</button>
       <button class="hbtn" onclick="exportExcel()">📥 Excel</button>
       <button class="hbtn" onclick="showTab('setup')">⚙️ إعدادات</button>
     </div>
@@ -1032,6 +1039,40 @@ if (!localStorage.getItem('tg_token')) { localStorage.setItem('tg_token', DEFAUL
 if (!localStorage.getItem('wa_number')) { localStorage.setItem('wa_number', '201288885171'); }
 // Always start on main tab
 showTab('main');
+
+// تسجيل Service Worker للـ PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW error:', err));
+  });
+}
+
+// زر تثبيت التطبيق
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // أظهر زرار التثبيت
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      deferredPrompt = null;
+    });
+  }
+}
 </script>
 </body>
 </html>
