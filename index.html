@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام شكاوى رى الجيزة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy: #1a4a6b; --navy-dark: #0d2d42; --water: #4ab3d4;
+  --water-light: #7dd3ec; --sand: #c8a96a; --sand-light: #e8d5a3;
+  --green: #2d7a3a; --green-light: #4aad5a; --red: #c0392b;
+  --white: #f8f6f0; --text: #1a1a1a;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Cairo', sans-serif;
+  background: linear-gradient(135deg, #0d2d42 0%, #1a4a6b 50%, #1a3d28 100%);
+  min-height: 100vh; display:flex; align-items:center; justify-content:center;
+  padding: 12px;
+}
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse at 15% 85%, rgba(74,179,212,.12) 0%, transparent 55%),
+              radial-gradient(ellipse at 85% 15%, rgba(45,122,58,.10) 0%, transparent 55%);
+}
+.app {
+  position:relative; z-index:1; width:100%; max-width:860px;
+  height:96vh; max-height:920px; display:flex; flex-direction:column;
+  border-radius:22px; overflow:hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(74,179,212,.2);
+}
+
+/* ── HEADER ── */
+.header {
+  background: linear-gradient(135deg, #0d2d42, #1a4a6b);
+  border-bottom: 2px solid rgba(74,179,212,.35);
+  padding: 10px 14px; display:flex; align-items:center; gap:10px;
+  position:relative; overflow:hidden; flex-shrink:0;
+}
+.header::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: linear-gradient(90deg, var(--sand), var(--water), var(--green-light), var(--water), var(--sand));
+}
+.logo { width:44px; height:44px; border-radius:12px; flex-shrink:0;
+  background: linear-gradient(135deg, var(--water), var(--navy));
+  display:flex; align-items:center; justify-content:center; font-size:22px;
+  box-shadow: 0 4px 18px rgba(74,179,212,.4); animation: glow 3s ease-in-out infinite; }
+@keyframes glow { 0%,100%{box-shadow:0 4px 18px rgba(74,179,212,.4)} 50%{box-shadow:0 4px 26px rgba(74,179,212,.7)} }
+.header-info { flex:1; }
+.header-title { font-size:14px; font-weight:900; color:var(--white); }
+.header-sub { font-size:10px; color:var(--water-light); margin-top:1px; }
+.online-dot { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--green-light); margin-top:3px; }
+.online-dot::before { content:''; width:7px; height:7px; background:var(--green-light);
+  border-radius:50%; animation:blink 2s infinite; box-shadow:0 0 5px var(--green-light); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+.header-actions { display:flex; gap:8px; }
+.hbtn { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+  border-radius:10px; padding:7px 12px; color:var(--white); font-family:'Cairo',sans-serif;
+  font-size:11.5px; cursor:pointer; transition:.2s; white-space:nowrap; }
+.hbtn:hover { background:rgba(74,179,212,.2); border-color:var(--water); }
+.hbtn.active { background:rgba(74,179,212,.25); border-color:var(--water); color:var(--water-light); }
+
+/* ── TABS ── */
+.tabs { background:rgba(13,45,66,.9); display:flex; border-bottom:1px solid rgba(74,179,212,.2); flex-shrink:0; }
+.tab { flex:1; padding:8px 6px; text-align:center; font-size:11.5px; font-weight:700;
+  color:rgba(255,255,255,.45); cursor:pointer; transition:.2s; border-bottom:2px solid transparent; }
+.tab:hover { color:rgba(255,255,255,.7); }
+.tab.active { color:var(--water-light); border-bottom-color:var(--water); background:rgba(74,179,212,.08); }
+
+/* ── PANELS ── */
+.panel { display:none; flex:1; overflow:hidden; flex-direction:column; }
+.panel.active { display:flex; }
+
+/* ─── PANEL 1: FORM + CHAT ─── */
+.form-chat { display:flex; flex:1; overflow:hidden; flex-direction:column; }
+
+/* Inner tabs for form/chat on mobile */
+.inner-tabs { display:none; background:rgba(13,45,66,.95); border-bottom:1px solid rgba(74,179,212,.2); flex-shrink:0; }
+.inner-tab { flex:1; padding:8px; text-align:center; font-size:12px; font-weight:700;
+  color:rgba(255,255,255,.45); cursor:pointer; border-bottom:2px solid transparent; }
+.inner-tab.active { color:var(--water-light); border-bottom-color:var(--water); background:rgba(74,179,212,.08); }
+
+/* Form side */
+.form-side {
+  width: 300px; flex-shrink:0;
+  background:rgba(8,25,38,.9); border-left:1px solid rgba(74,179,212,.15);
+  overflow-y:auto; padding:12px; padding-bottom:20px;
+}
+.form-side::-webkit-scrollbar { width:3px; }
+.form-side::-webkit-scrollbar-thumb { background:rgba(74,179,212,.3); border-radius:3px; }
+.form-title { font-size:12.5px; font-weight:700; color:var(--water-light); margin-bottom:14px;
+  padding-bottom:8px; border-bottom:1px solid rgba(74,179,212,.2); display:flex; align-items:center; gap:6px; }
+.field { margin-bottom:9px; }
+.field label { display:block; font-size:10.5px; color:rgba(255,255,255,.6); margin-bottom:4px; font-weight:600; }
+.field input, .field select, .field textarea {
+  width:100%; background:rgba(26,74,107,.3); border:1px solid rgba(74,179,212,.25);
+  border-radius:10px; padding:8px 11px; color:var(--white); font-family:'Cairo',sans-serif;
+  font-size:12px; outline:none; direction:rtl; transition:.2s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color:var(--water); }
+.field textarea { resize:none; height:55px; }
+.field select option { background:#1a4a6b; }
+.field input::placeholder, .field textarea::placeholder { color:rgba(255,255,255,.3); }
+.submit-btn {
+  width:100%; padding:9px; background:linear-gradient(135deg, var(--water), var(--navy));
+  border:none; border-radius:11px; color:white; font-family:'Cairo',sans-serif;
+  font-weight:700; font-size:13px; cursor:pointer; transition:.2s;
+  box-shadow:0 4px 15px rgba(74,179,212,.3);
+}
+.submit-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(74,179,212,.4); }
+.wa-btn {
+  width:100%; padding:9px; background:linear-gradient(135deg, #25d366, #128c7e);
+  border:none; border-radius:11px; color:white; font-family:'Cairo',sans-serif;
+  font-weight:700; font-size:13px; cursor:pointer; transition:.2s;
+  box-shadow:0 4px 15px rgba(37,211,102,.3); display:flex; align-items:center;
+  justify-content:center; gap:6px;
+}
+.wa-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(37,211,102,.5); }
+
+/* ticket confirmed */
+.ticket-confirm {
+  display:none; background:rgba(45,122,58,.15); border:1px solid rgba(74,212,100,.3);
+  border-radius:12px; padding:12px; margin-top:12px; text-align:center;
+}
+.ticket-confirm .tic-num { font-size:18px; font-weight:900; color:var(--green-light); }
+.ticket-confirm .tic-label { font-size:10.5px; color:rgba(255,255,255,.5); margin-top:3px; }
+
+/* Chat side */
+.chat-side { flex:1; display:flex; flex-direction:column; background:rgba(8,25,38,.85); }
+.chat-msgs { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:14px; }
+.chat-msgs::-webkit-scrollbar { width:3px; }
+.chat-msgs::-webkit-scrollbar-thumb { background:rgba(74,179,212,.3); border-radius:3px; }
+
+.msg-row { display:flex; gap:9px; align-items:flex-end; animation:fadeUp .3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg-row.user { flex-direction:row-reverse; }
+.av { width:34px; height:34px; border-radius:11px; display:flex; align-items:center;
+  justify-content:center; font-size:17px; flex-shrink:0; }
+.av.bot { background:linear-gradient(135deg, var(--water), var(--navy)); }
+.av.user { background:linear-gradient(135deg, #8b6914, var(--sand)); }
+.bbl { max-width:80%; padding:11px 14px; border-radius:15px; font-size:13px;
+  line-height:1.75; color:var(--white); }
+.bbl.bot { background:rgba(26,74,107,.5); border:1px solid rgba(74,179,212,.2); border-bottom-right-radius:4px; }
+.bbl.user { background:linear-gradient(135deg, var(--navy), #2a6a9b); border:1px solid rgba(74,179,212,.3); border-bottom-left-radius:4px; }
+.bbl .sname { font-size:10px; font-weight:700; color:var(--water-light); margin-bottom:4px; display:block; }
+.bbl.user .sname { color:var(--sand-light); }
+.bbl .tm { font-size:10px; color:rgba(255,255,255,.35); margin-top:5px; display:block; }
+
+/* typing */
+.typing { display:flex; gap:4px; padding:12px 16px; align-items:center; }
+.typing span { width:7px; height:7px; background:var(--water); border-radius:50%; animation:bounce 1.2s infinite; }
+.typing span:nth-child(2){animation-delay:.2s} .typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-7px)} }
+
+/* quick chips */
+.quick-chips { padding:8px 14px; display:flex; gap:7px; overflow-x:auto; background:rgba(13,45,66,.7);
+  border-top:1px solid rgba(74,179,212,.1); }
+.quick-chips::-webkit-scrollbar { display:none; }
+.chip { background:rgba(74,179,212,.1); border:1px solid rgba(74,179,212,.25); border-radius:18px;
+  padding:4px 11px; font-size:11px; color:var(--water-light); white-space:nowrap;
+  cursor:pointer; font-family:'Cairo',sans-serif; transition:.2s; flex-shrink:0; }
+.chip:hover { background:rgba(74,179,212,.25); color:white; }
+
+/* chat input */
+.chat-input-bar { padding:12px 14px; background:rgba(13,45,66,.95);
+  border-top:1px solid rgba(74,179,212,.2); display:flex; gap:9px; align-items:flex-end; }
+.chat-input-bar textarea {
+  flex:1; background:rgba(26,74,107,.3); border:1px solid rgba(74,179,212,.25);
+  border-radius:12px; padding:10px 14px; color:var(--white); font-family:'Cairo',sans-serif;
+  font-size:13px; resize:none; outline:none; direction:rtl; min-height:44px; max-height:110px;
+  transition:.2s; line-height:1.6;
+}
+.chat-input-bar textarea:focus { border-color:var(--water); }
+.chat-input-bar textarea::placeholder { color:rgba(255,255,255,.3); }
+.sbtn { width:44px; height:44px; background:linear-gradient(135deg, var(--water), var(--navy));
+  border:none; border-radius:12px; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; font-size:18px; color:white; transition:.2s; flex-shrink:0; }
+.sbtn:hover { transform:scale(1.06); }
+.sbtn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+/* ─── PANEL 2: COMPLAINTS LOG ─── */
+.log-panel { background:rgba(8,25,38,.9); overflow:hidden; }
+.log-toolbar { padding:12px 16px; display:flex; gap:10px; align-items:center;
+  border-bottom:1px solid rgba(74,179,212,.15); flex-shrink:0; }
+.log-toolbar input { flex:1; background:rgba(26,74,107,.3); border:1px solid rgba(74,179,212,.25);
+  border-radius:10px; padding:8px 13px; color:white; font-family:'Cairo',sans-serif;
+  font-size:12px; outline:none; direction:rtl; }
+.log-toolbar input::placeholder { color:rgba(255,255,255,.35); }
+.export-btn { background:linear-gradient(135deg, var(--green), var(--green-light));
+  border:none; border-radius:10px; padding:8px 14px; color:white; font-family:'Cairo',sans-serif;
+  font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; transition:.2s; }
+.export-btn:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(45,122,58,.4); }
+.log-body { flex:1; overflow-y:auto; padding:10px 14px; }
+.log-body::-webkit-scrollbar { width:3px; }
+.log-body::-webkit-scrollbar-thumb { background:rgba(74,179,212,.3); border-radius:3px; }
+
+.complaint-card {
+  background:rgba(26,74,107,.25); border:1px solid rgba(74,179,212,.15);
+  border-radius:13px; padding:14px 16px; margin-bottom:10px; transition:.2s; cursor:default;
+}
+.complaint-card:hover { border-color:rgba(74,179,212,.4); background:rgba(26,74,107,.4); }
+.card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.card-ticket { font-size:11.5px; font-weight:700; color:var(--sand-light); }
+.card-date { font-size:10.5px; color:rgba(255,255,255,.4); }
+.card-name { font-size:14px; font-weight:700; color:var(--white); margin-bottom:5px; }
+.card-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.tag { background:rgba(74,179,212,.12); border:1px solid rgba(74,179,212,.2);
+  border-radius:8px; padding:2px 9px; font-size:10.5px; color:var(--water-light); }
+.card-detail { font-size:12px; color:rgba(255,255,255,.6); line-height:1.6; }
+.status-badge { border-radius:8px; padding:3px 10px; font-size:10.5px; font-weight:700; }
+.s-new { background:rgba(255,220,50,.15); color:#ffd632; border:1px solid rgba(255,220,50,.3); }
+.s-progress { background:rgba(74,179,212,.15); color:var(--water-light); border:1px solid rgba(74,179,212,.3); }
+.s-done { background:rgba(45,122,58,.2); color:var(--green-light); border:1px solid rgba(74,212,100,.3); }
+.card-dept { font-size:11px; color:var(--sand-light); margin-top:7px; }
+
+.empty-log { text-align:center; padding:60px 20px; color:rgba(255,255,255,.3); font-size:14px; }
+
+/* ─── PANEL 3: SETUP ─── */
+.setup-panel { background:rgba(8,25,38,.9); padding:20px; overflow-y:auto; }
+.setup-card { background:rgba(26,74,107,.25); border:1px solid rgba(74,179,212,.2);
+  border-radius:15px; padding:20px; margin-bottom:16px; }
+.setup-card h3 { font-size:14px; font-weight:700; color:var(--water-light); margin-bottom:14px;
+  padding-bottom:10px; border-bottom:1px solid rgba(74,179,212,.15); }
+.setup-field { margin-bottom:12px; }
+.setup-field label { display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:5px; }
+.setup-field input { width:100%; background:rgba(26,74,107,.4); border:1px solid rgba(74,179,212,.25);
+  border-radius:10px; padding:9px 13px; color:white; font-family:'Cairo',sans-serif; font-size:12.5px;
+  outline:none; transition:.2s; direction:ltr; }
+.setup-field input:focus { border-color:var(--water); }
+.save-btn { background:linear-gradient(135deg, var(--water), var(--navy)); border:none;
+  border-radius:10px; padding:10px 22px; color:white; font-family:'Cairo',sans-serif;
+  font-weight:700; font-size:13px; cursor:pointer; transition:.2s; }
+.save-btn:hover { transform:translateY(-1px); }
+.info-box { background:rgba(200,169,106,.1); border:1px solid rgba(200,169,106,.3);
+  border-radius:10px; padding:12px 15px; font-size:12px; color:var(--sand-light); line-height:1.8; }
+.step { display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; }
+.step-num { width:26px; height:26px; border-radius:50%; background:var(--water);
+  color:white; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.step-text { font-size:12px; color:rgba(255,255,255,.75); line-height:1.7; }
+
+/* Stats bar */
+.stats-bar { display:flex; gap:0; background:rgba(13,45,66,.8);
+  border-bottom:1px solid rgba(74,179,212,.15); flex-shrink:0; }
+.stat-box { flex:1; padding:5px 8px; text-align:center; border-left:1px solid rgba(74,179,212,.1); }
+.stat-box:last-child { border-left:none; }
+.stat-num { font-size:16px; font-weight:900; color:var(--water-light); }
+.stat-lbl { font-size:9.5px; color:rgba(255,255,255,.4); }
+
+@media(max-width:700px) {
+  .form-chat { flex-direction:column; }
+  .inner-tabs { display:flex; }
+  .form-side { 
+    width:100%; border-left:none; border-bottom:1px solid rgba(74,179,212,.15);
+    display:none; flex:1; overflow-y:auto;
+  }
+  .form-side.mobile-active { display:block; }
+  .chat-side { display:none; }
+  .chat-side.mobile-active { display:flex; }
+  .header-sub { display:none; }
+  .bbl { max-width:92%; font-size:12.5px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">🌊</div>
+    <div class="header-info">
+      <div class="header-title">نظام شكاوى رى الجيزة</div>
+      <div class="header-sub">الإدارة العامة لرى محافظة الجيزة — وزارة الرى</div>
+      <div class="online-dot">مساعد ذكي متاح</div>
+    </div>
+    <div class="header-actions">
+      <button class="hbtn" onclick="exportExcel()">📥 Excel</button>
+      <button class="hbtn" onclick="showTab('setup')">⚙️ إعدادات</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('main')" id="tab-main">💬 الشكوى والمحادثة</div>
+    <div class="tab" onclick="showTab('log')" id="tab-log">📋 سجل الشكاوى <span id="badge" style="background:var(--water);color:white;border-radius:10px;padding:1px 7px;font-size:10px;margin-right:4px;display:none"></span></div>
+    <div class="tab" onclick="showTab('setup')" id="tab-setup">⚙️ إعدادات</div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">إجمالي</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-new" style="color:#ffd632">0</div><div class="stat-lbl">جديدة</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-prog" style="color:var(--water-light)">0</div><div class="stat-lbl">جارية</div></div>
+    <div class="stat-box"><div class="stat-num" id="st-done" style="color:var(--green-light)">0</div><div class="stat-lbl">محلولة</div></div>
+  </div>
+
+  <!-- PANEL 1: MAIN -->
+  <div class="panel active" id="panel-main">
+    <div class="form-chat">
+      <!-- Mobile inner tabs -->
+      <div class="inner-tabs" id="innerTabs">
+        <div class="inner-tab active" onclick="switchInner('form')" id="itab-form">📝 تسجيل الشكوى</div>
+        <div class="inner-tab" onclick="switchInner('chat')" id="itab-chat">💬 المحادثة</div>
+      </div>
+
+      <!-- Form -->
+      <div class="form-side mobile-active" id="formSide">
+        <div class="form-title">📝 بيانات الشكوى</div>
+
+        <div class="field">
+          <label>اسم المزارع *</label>
+          <input type="text" id="f-name" placeholder="الاسم بالكامل">
+        </div>
+        <div class="field">
+          <label>رقم التليفون *</label>
+          <input type="tel" id="f-phone" placeholder="01xxxxxxxxx" dir="ltr">
+        </div>
+        <div class="field">
+          <label>المنطقة / المركز *</label>
+          <select id="f-area">
+            <option value="">اختر المنطقة</option>
+            <option>الصف</option><option>أطفيح</option><option>العياط</option>
+            <option>البدرشين</option><option>أوسيم</option><option>كرداسة</option>
+            <option>إمبابة</option><option>الجيزة</option><option>الهرم</option>
+            <option>أبو النمرس</option><option>منشأة القناطر</option>
+            <option>الحوامدية</option><option>المنيب</option><option>منطقة أخرى</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>اسم الترعة (اختياري)</label>
+          <input type="text" id="f-canal" placeholder="مثال: ترعة الريان">
+        </div>
+        <div class="field">
+          <label>نوع الشكوى *</label>
+          <select id="f-type">
+            <option value="">اختر نوع الشكوى</option>
+            <option>انقطاع مياه</option>
+            <option>تطهير ترعة / إزالة حشائش</option>
+            <option>تسريب فى ترعة أو مصرف</option>
+            <option>إهدار مياه</option>
+            <option>مشكلة فى دور الرى</option>
+            <option>اعتداء على مياه الغير</option>
+            <option>تضرر محاصيل</option>
+            <option>أخرى</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>تفاصيل المشكلة</label>
+          <textarea id="f-details" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
+        </div>
+
+        <button class="submit-btn" onclick="submitComplaint()">📨 تسجيل الشكوى وبدء المحادثة</button>
+
+        <div class="ticket-confirm" id="ticket-confirm">
+          <div style="font-size:22px; margin-bottom:6px">✅</div>
+          <div class="tic-num" id="tic-num-display"></div>
+          <div class="tic-label">رقم الشكوى — احتفظ به للمتابعة</div>
+          <button class="wa-btn" id="waBtn" onclick="sendWhatsApp()" style="margin-top:10px">
+            <span>📲</span> إرسال على WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="chat-side" id="chatSide">
+        <div class="chat-msgs" id="chatMsgs">
+          <div class="msg-row bot">
+            <div class="av bot">🌊</div>
+            <div class="bbl bot">
+              <span class="sname">مساعد رى الجيزة</span>
+              أهلاً وسهلاً! 👋<br>
+              أنا المساعد الذكي بتاع الإدارة العامة لرى الجيزة.<br><br>
+              سجّل بياناتك فى الجانب الأيسر وابدأ المحادثة، أو اكتب شكواك مباشرةً وهساعدك.
+              <span class="tm" id="init-time"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <div class="chip" onclick="quickMsg('انقطع المياه عن حيازتى')">💧 انقطاع مياه</div>
+          <div class="chip" onclick="quickMsg('الترعة مسدودة ومحتاج تطهير')">🌿 تطهير ترعة</div>
+          <div class="chip" onclick="quickMsg('فيه تسريب فى الترعة')">🔧 تسريب</div>
+          <div class="chip" onclick="quickMsg('عندى شكوى من إهدار مياه')">🚱 إهدار مياه</div>
+          <div class="chip" onclick="quickMsg('عايز أعرف موعد الرى بتاعى')">📅 موعد الرى</div>
+          <div class="chip" onclick="quickMsg('جارى بيسرق مياهى')">👨‍🌾 شكوى جار</div>
+        </div>
+
+        <div class="chat-input-bar">
+          <button class="sbtn" onclick="sendMsg()" id="sendBtn">➤</button>
+          <textarea id="chatInput" placeholder="اكتب رسالتك هنا..." rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 2: LOG -->
+  <div class="panel log-panel" id="panel-log">
+    <div class="log-toolbar">
+      <input type="text" id="searchInput" placeholder="ابحث بالاسم أو رقم الشكوى أو المنطقة..." oninput="renderLog()">
+      <button class="export-btn" onclick="exportExcel()">📥 تحميل Excel</button>
+    </div>
+    <div class="log-body" id="logBody">
+      <div class="empty-log">لا توجد شكاوى مسجلة بعد</div>
+    </div>
+  </div>
+
+  <!-- PANEL 3: SETUP -->
+  <div class="panel setup-panel" id="panel-setup">
+    <div class="setup-card">
+      <h3>📱 إعدادات Telegram</h3>
+      <div class="info-box" style="margin-bottom:14px">
+        لما تجيب Bot Token من BotFather، حطّه هنا وهيبدأ يبعت كل شكوى تلقائياً على غرفة العمليات.
+      </div>
+      <div class="setup-field">
+        <label>Bot Token</label>
+        <input type="text" id="tg-token" placeholder="1234567890:ABCdef..." oninput="saveSettings()">
+      </div>
+      <div class="setup-field">
+        <label>Chat ID (رقم غرفة العمليات)</label>
+        <input type="text" id="tg-chat" placeholder="مثال: 1148446271" oninput="saveSettings()" dir="ltr">
+      </div>
+      <button class="save-btn" onclick="testTelegram()">🔔 اختبار الإرسال</button>
+      <span id="tg-status" style="font-size:11.5px;margin-right:10px;color:var(--green-light)"></span>
+    </div>
+
+    <div class="setup-card">
+      <h3>📲 إعدادات WhatsApp</h3>
+      <div class="info-box" style="margin-bottom:14px">
+        لما المزارع يسجل الشكوى، هيظهرله زرار يبعت الشكوى على رقم WhatsApp بتاعك مباشرة.
+      </div>
+      <div class="setup-field">
+        <label>رقم WhatsApp غرفة العمليات (بالكود الدولي)</label>
+        <input type="text" id="wa-number" placeholder="201288885171" oninput="saveSettings()" dir="ltr">
+      </div>
+      <div class="info-box" style="margin-top:10px; font-size:11px">
+        ⚠️ الرقم بدون + ومع كود مصر: 20 قبل الرقم<br>
+        مثال: 01288885171 تبقى 201288885171
+      </div>
+    </div>
+
+    <div class="setup-card">
+      <h3>📖 كيف تجيب Bot Token؟</h3>
+      <div class="step"><div class="step-num">1</div><div class="step-text">افتح Telegram وابحث عن <b>@BotFather</b></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">ابعتله الأمر: <b>/newbot</b></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">اختار اسم للبوت مثلاً: <b>ري الجيزة الشكاوى</b></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">BotFather هيبعتلك Token — انسخه وحطّه فوق</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Chat ID بتاعك هو: <b>1148446271</b> (نفس اللي عندك)</div></div>
+    </div>
+
+    <div class="setup-card">
+      <h3>ℹ️ معلومات الإدارة</h3>
+      <div class="info-box">
+        📞 غرفة العمليات: <b>01288885171</b><br>
+        📞 خدمة المواطنين: <b>16016</b><br>
+        🏛️ الإدارة العامة لرى محافظة الجيزة<br>
+        📍 وزارة الرى والموارد المائية
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+let complaints = JSON.parse(localStorage.getItem('giz_complaints') || '[]');
+let chatHistory = [];
+let ticketCounter = parseInt(localStorage.getItem('giz_counter') || '1000');
+let isTyping = false;
+let currentTicket = null;
+
+const SYSTEM = `أنت مساعد ذكاء اصطناعي رسمي للإدارة العامة لري محافظة الجيزة، وزارة الري والموارد المائية، مصر.
+
+مهمتك: الرد على شكاوى المزارعين بالعامية المصرية بأسلوب محترم وعملي.
+
+**المناطق:** الصف، أطفيح، العياط، البدرشين، أوسيم، كرداسة، إمبابة، الجيزة، الهرم، أبو النمرس، منشأة القناطر، الحوامدية، المنيب.
+
+**أنواع الشكاوى وجهة الاختصاص:**
+- انقطاع مياه → قسم التوزيع
+- تطهير ترعة / حشائش → قسم الصيانة
+- تسريب أو كسر → فريق الطوارئ (فوري)
+- إهدار مياه → مفتش الري المختص
+- دور الري → قسم التوزيع
+- اعتداء على مياه → الشرطة + مفتش الري
+
+**أرقام مهمة:**
+- غرفة العمليات: 01288885171
+- خدمة المواطنين: 16016
+
+**قواعد الرد:**
+1. رحّب بالمزارع واظهر اهتمامك
+2. اشرح الخطوات اللي هتتاخد
+3. حدد الجهة المختصة
+4. قصير وعملي (مش أكتر من 120 كلمة)
+5. لو الموضوع خطير (تسريب كبير) قوله يتصل فوراً بالأوبريشن`;
+
+function switchInner(tab) {
+  const isMobile = window.innerWidth <= 700;
+  if (!isMobile) return;
+  document.getElementById('formSide').classList.toggle('mobile-active', tab==='form');
+  document.getElementById('chatSide').classList.toggle('mobile-active', tab==='chat');
+  document.getElementById('itab-form').classList.toggle('active', tab==='form');
+  document.getElementById('itab-chat').classList.toggle('active', tab==='chat');
+}
+
+// After form submit, switch to chat on mobile
+function afterFormSubmit() {
+  if (window.innerWidth <= 700) switchInner('chat');
+}
+
+function getTime() {
+  return new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
+}
+
+// ═══════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════
+function showTab(name) {
+  if (name === 'setup') {
+    const pass = prompt('أدخل كلمة السر للدخول للإعدادات:');
+    if (pass !== 'Mohsen@1966') { alert('كلمة السر غلط!'); return; }
+  }
+  if (name === 'log') {
+    const pass = prompt('أدخل كلمة السر للدخول لسجل الشكاوى:');
+    if (pass !== 'Mohsen@1966') { alert('كلمة السر غلط!'); return; }
+  }
+  ['main','log','setup'].forEach(t => {
+    document.getElementById('panel-'+t).classList.toggle('active', t===name);
+    document.getElementById('tab-'+t)?.classList.toggle('active', t===name);
+  });
+  if (name === 'log') renderLog();
+}
+
+// ═══════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════
+function updateStats() {
+  const total = complaints.length;
+  const newC = complaints.filter(c=>c.status==='جديدة').length;
+  const prog = complaints.filter(c=>c.status==='قيد التنفيذ').length;
+  const done = complaints.filter(c=>c.status==='محلولة').length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-new').textContent = newC;
+  document.getElementById('st-prog').textContent = prog;
+  document.getElementById('st-done').textContent = done;
+  const badge = document.getElementById('badge');
+  if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
+  else badge.style.display = 'none';
+}
+
+// ═══════════════════════════════════════
+//  FORM SUBMIT
+// ═══════════════════════════════════════
+function submitComplaint() {
+  const name = document.getElementById('f-name').value.trim();
+  const phone = document.getElementById('f-phone').value.trim();
+  const area = document.getElementById('f-area').value;
+  const type = document.getElementById('f-type').value;
+  if (!name || !phone || !area || !type) {
+    alert('من فضلك أكمل البيانات الأساسية: الاسم، التليفون، المنطقة، نوع الشكوى');
+    return;
+  }
+  ticketCounter++;
+  localStorage.setItem('giz_counter', ticketCounter);
+  const year = new Date().getFullYear();
+  const ticket = `GIZ-${year}-${ticketCounter}`;
+  currentTicket = ticket;
+  const canal = document.getElementById('f-canal').value.trim();
+  const details = document.getElementById('f-details').value.trim();
+  const dept = getDept(type);
+  const complaint = {
+    ticket, name, phone, area, canal, type, details, dept,
+    status: 'جديدة',
+    date: new Date().toLocaleDateString('ar-EG'),
+    time: getTime(),
+    timestamp: Date.now()
+  };
+  complaints.unshift(complaint);
+  localStorage.setItem('giz_complaints', JSON.stringify(complaints));
+  updateStats();
+
+  // Show ticket
+  document.getElementById('tic-num-display').textContent = ticket;
+  document.getElementById('ticket-confirm').style.display = 'block';
+  setTimeout(() => {
+    document.getElementById('ticket-confirm').scrollIntoView({behavior:'smooth', block:'center'});
+  }, 200);
+
+  // Send Telegram
+  sendTelegram(complaint);
+  afterFormSubmit();
+
+  // Send opening message to chat
+  const summary = `📋 شكوى جديدة مسجلة
+🎫 رقم الشكوى: ${ticket}
+👨‍🌾 الاسم: ${name}
+📍 المنطقة: ${area}${canal ? ' — ' + canal : ''}
+⚠️ النوع: ${type}
+${details ? '📝 التفاصيل: ' + details : ''}`;
+
+  appendMsg('user', summary);
+  chatHistory.push({role:'user', content: summary});
+  showTypingBubble();
+
+  callClaude(summary, true);
+}
+
+function getDept(type) {
+  if (type.includes('انقطاع') || type.includes('دور')) return 'قسم التوزيع';
+  if (type.includes('تطهير') || type.includes('حشائش')) return 'قسم الصيانة';
+  if (type.includes('تسريب') || type.includes('كسر')) return 'فريق الطوارئ';
+  if (type.includes('إهدار')) return 'مفتش الري';
+  if (type.includes('اعتداء')) return 'الشرطة + مفتش الري';
+  return 'الإدارة';
+}
+
+// ═══════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════
+function appendMsg(role, text) {
+  const msgs = document.getElementById('chatMsgs');
+  const isBot = role === 'bot';
+  const div = document.createElement('div');
+  div.className = `msg-row ${isBot ? 'bot' : 'user'}`;
+  div.innerHTML = `
+    <div class="av ${isBot ? 'bot' : 'user'}">${isBot ? '🌊' : '👨‍🌾'}</div>
+    <div class="bbl ${isBot ? 'bot' : 'user'}">
+      <span class="sname">${isBot ? 'مساعد رى الجيزة' : 'المزارع'}</span>
+      <div>${text.replace(/\n/g,'<br>')}</div>
+      <span class="tm">${getTime()}</span>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTypingBubble() {
+  const msgs = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+  div.className = 'msg-row bot'; div.id = 'typing-bubble';
+  div.innerHTML = `<div class="av bot">🌊</div><div class="bbl bot"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTypingBubble() {
+  document.getElementById('typing-bubble')?.remove();
+}
+
+async function callClaude(userText, fromForm = false) {
+  isTyping = true;
+  document.getElementById('sendBtn').disabled = true;
+  // Try Anthropic API
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM,
+        messages: chatHistory
+      })
+    });
+    const data = await response.json();
+    const reply = data.content?.[0]?.text;
+    if (reply) {
+      chatHistory.push({role:'assistant', content: reply});
+      removeTypingBubble();
+      appendMsg('bot', reply);
+      isTyping = false;
+      document.getElementById('sendBtn').disabled = false;
+      return;
+    }
+  } catch(e) {}
+  // Offline fallback
+  const reply = getLocalReply(userText, fromForm);
+  chatHistory.push({role:'assistant', content: reply});
+  removeTypingBubble();
+  appendMsg('bot', reply);
+  isTyping = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function getLocalReply(text, fromForm) {
+  const t = text;
+  if (fromForm) {
+    const c = complaints[0];
+    const deptMsg = {
+      'قسم التوزيع': 'قسم التوزيع هيتواصل معاك لتحديد موعد إعادة المياه.',
+      'قسم الصيانة': 'فريق الصيانة هيجى للمعاينة وجدولة التطهير.',
+      'فريق الطوارئ': '⚠️ الموضوع عاجل! فريق الطوارئ هيتحرك فوراً للموقع.',
+      'مفتش الري': 'مفتش الري هييجى للمعاينة وتحرير محضر.',
+      'الشرطة + مفتش الري': 'قدّم بلاغ للشرطة، ومفتش الري هييجى للمعاينة.',
+    }[c?.dept] || 'الإدارة هتتابع شكواك.';
+    return 'تم تسجيل شكواك بنجاح! 🎫\n\nرقم الشكوى: ' + (c?.ticket||'') + '\nالجهة المختصة: ' + (c?.dept||'') + '\n\n' + deptMsg + '\n\n📞 متابعة عاجلة: 01288885171';
+  }
+  if (t.includes('انقطع') || t.includes('مافيش ماء') || t.includes('انقطاع') || (t.includes('مياه') && t.includes('مفيش')))
+    return 'مشكلة انقطاع المياه بتتحل عن طريق قسم التوزيع.\n\n✅ الخطوات:\n1. سجّل شكواك من النموذج على اليسار\n2. مفتش هيجى للمعاينة خلال 24 ساعة\n3. يتم إعادة المياه حسب الأولوية\n\n📞 لو عاجل: 01288885171';
+  if (t.includes('تطهير') || (t.includes('ترعة') && t.includes('مسدود')) || t.includes('حشايش') || t.includes('حشائش'))
+    return 'تطهير الترع من مهام قسم الصيانة.\n\n✅ الخطوات:\n1. سجّل الشكوى بالنموذج مع اسم الترعة\n2. فريق الصيانة هيجى للمعاينة\n3. يتم جدولة التطهير حسب الأولويات\n\n📞 للمتابعة: 01288885171';
+  if (t.includes('تسريب') || t.includes('كسر') || t.includes('انهيار'))
+    return '⚠️ التسريب أو الكسر حالة طارئة!\n\nاتصل فوراً بغرفة العمليات:\n📞 01288885171\n\nوسجّل الشكوى بالنموذج عشان يتبعت فريق الطوارئ للموقع فوراً.';
+  if (t.includes('إهدار') || t.includes('بيضيع') || t.includes('بيسرق') || t.includes('سرقة'))
+    return 'إهدار المياه مخالفة قانونية.\n\n✅ الخطوات:\n1. سجّل الشكوى بالنموذج مع تحديد الموقع\n2. مفتش الري هيجى للمعاينة وتحرير محضر\n3. يتم اتخاذ الإجراء القانوني\n\n📞 للإبلاغ الفوري: 01288885171';
+  if (t.includes('دور') || t.includes('موعد') || t.includes('امتى') || t.includes('إمتى'))
+    return 'لمعرفة دور الري:\n\n📞 اتصل بقسم التوزيع: 01288885171\nوأخبرهم باسمك والحيازة والمنطقة\n\nأو سجّل استفسارك بالنموذج وهيتواصلوا معاك.';
+  if (t.includes('جار') || t.includes('اعتداء') || t.includes('بياخد') || t.includes('حصة'))
+    return 'الاعتداء على حصة مياه الغير مخالفة قانونية.\n\n✅ الخطوات:\n1. سجّل الشكوى فوراً بالنموذج\n2. مفتش الري هيجى لتحرير محضر\n3. يمكن رفع البلاغ للشرطة\n\n📞 أوبريشن: 01288885171';
+  if (t.includes('شكر') || t.includes('متشكر'))
+    return 'العفو! إحنا فى الخدمة دايماً 🌊\nأى شكوى تانية أنا هنا.';
+  return 'شكراً لتواصلك مع نظام رى الجيزة 🌊\n\nسجّل شكواك من النموذج على اليسار عشان نتابعها رسمياً ونبعتلك رقم مرجعي.\n\n📞 للتواصل المباشر: 01288885171';
+}
+
+async function sendMsg() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isTyping) return;
+  input.value = ''; input.style.height = 'auto';
+  appendMsg('user', text);
+  chatHistory.push({role:'user', content: text});
+  showTypingBubble();
+  await callClaude(text);
+}
+
+function quickMsg(text) {
+  document.getElementById('chatInput').value = text;
+  sendMsg();
+}
+
+// ═══════════════════════════════════════
+//  COMPLAINTS LOG
+// ═══════════════════════════════════════
+function renderLog() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const body = document.getElementById('logBody');
+  const filtered = complaints.filter(c =>
+    c.name.includes(q) || c.ticket.toLowerCase().includes(q) ||
+    c.area.includes(q) || c.type.includes(q) || (c.canal||'').includes(q)
+  );
+  if (filtered.length === 0) {
+    body.innerHTML = '<div class="empty-log">🔍 لا توجد نتائج</div>';
+    return;
+  }
+  body.innerHTML = filtered.map(c => `
+    <div class="complaint-card">
+      <div class="card-top">
+        <span class="card-ticket">🎫 ${c.ticket}</span>
+        <span class="${statusClass(c.status)} status-badge">${c.status}</span>
+      </div>
+      <div class="card-name">👨‍🌾 ${c.name} &nbsp;•&nbsp; <span style="font-size:12px;color:rgba(255,255,255,.5)">${c.phone}</span></div>
+      <div class="card-meta">
+        <span class="tag">📍 ${c.area}</span>
+        ${c.canal ? `<span class="tag">🌊 ${c.canal}</span>` : ''}
+        <span class="tag">⚠️ ${c.type}</span>
+        <span class="tag">🏢 ${c.dept}</span>
+      </div>
+      ${c.details ? `<div class="card-detail">${c.details}</div>` : ''}
+      <div class="card-dept">📅 ${c.date} — ${c.time}</div>
+    </div>
+  `).join('');
+}
+
+function statusClass(s) {
+  if (s === 'جديدة') return 's-new';
+  if (s === 'قيد التنفيذ') return 's-progress';
+  if (s === 'محلولة') return 's-done';
+  return 's-new';
+}
+
+// ═══════════════════════════════════════
+//  EXCEL EXPORT
+// ═══════════════════════════════════════
+function exportExcel() {
+  if (complaints.length === 0) { alert('لا توجد شكاوى للتصدير بعد'); return; }
+  const rows = [['رقم الشكوى','التاريخ','الوقت','الاسم','التليفون','المنطقة','الترعة','نوع الشكوى','التفاصيل','الجهة','الحالة']];
+  complaints.forEach(c => rows.push([c.ticket, c.date, c.time, c.name, c.phone, c.area, c.canal||'', c.type, c.details||'', c.dept, c.status]));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [14,14,10,18,14,16,16,20,35,16,12].map(w => ({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'سجل الشكاوى');
+  const date = new Date().toLocaleDateString('ar-EG').replace(/\//g,'-');
+  XLSX.writeFile(wb, `شكاوى_رى_الجيزة_${date}.xlsx`);
+}
+
+// ═══════════════════════════════════════
+//  TELEGRAM
+// ═══════════════════════════════════════
+function saveSettings() {
+  localStorage.setItem('tg_token', document.getElementById('tg-token').value);
+  localStorage.setItem('tg_chat', document.getElementById('tg-chat').value);
+  localStorage.setItem('wa_number', document.getElementById('wa-number').value);
+}
+
+function sendWhatsApp() {
+  var c = complaints[0];
+  if (!c) return;
+  var waNum = localStorage.getItem('wa_number') || '201288885171';
+  var txt = '🚨 شكوى جديدة - رى الجيزة' + '%0A%0A';
+  txt += '🎫 ' + (c.ticket||'') + '%0A';
+  txt += '👨 ' + c.name + '%0A';
+  txt += '📞 ' + c.phone + '%0A';
+  txt += '📍 ' + c.area + (c.canal ? ' - ' + c.canal : '') + '%0A';
+  txt += '⚠️ ' + c.type + '%0A';
+  txt += '🏢 ' + c.dept + '%0A';
+  if (c.details) txt += '📝 ' + c.details + '%0A';
+  txt += '%0A🕐 ' + c.date + ' - ' + c.time;
+  window.open('https://wa.me/' + waNum + '?text=' + encodeURIComponent(decodeURIComponent(txt)), '_blank');
+}
+
+async function sendTelegram(c) {
+  const token = localStorage.getItem('tg_token');
+  const chatId = localStorage.getItem('tg_chat');
+  if (!token || !chatId) return;
+  const msg = `🚨 شكوى جديدة — رى الجيزة\n\n🎫 ${c.ticket}\n👨‍🌾 ${c.name}\n📞 ${c.phone}\n📍 ${c.area}${c.canal ? ' — ' + c.canal : ''}\n⚠️ ${c.type}\n🏢 ${c.dept}\n${c.details ? '📝 ' + c.details : ''}\n\n🕐 ${c.date} — ${c.time}`;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({chat_id: chatId, text: msg})
+    });
+  } catch(e) {}
+}
+
+async function testTelegram() {
+  const token = document.getElementById('tg-token').value;
+  const chatId = document.getElementById('tg-chat').value;
+  const status = document.getElementById('tg-status');
+  if (!token || !chatId) { status.style.color = '#e74c3c'; status.textContent = '❌ أدخل Token و Chat ID'; return; }
+  status.style.color = 'var(--water-light)'; status.textContent = '⏳ جاري الإرسال...';
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id: chatId, text: '✅ تم ربط نظام شكاوى رى الجيزة بنجاح!\n🌊 الإدارة العامة لرى محافظة الجيزة'})
+    });
+    const d = await r.json();
+    if (d.ok) { status.style.color = 'var(--green-light)'; status.textContent = '✅ تم الإرسال بنجاح!'; saveSettings(); }
+    else { status.style.color = '#e74c3c'; status.textContent = '❌ Token أو Chat ID غلط'; }
+  } catch(e) { status.style.color = '#e74c3c'; status.textContent = '❌ خطأ في الاتصال'; }
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+document.getElementById('init-time').textContent = getTime();
+updateStats();
+// Load saved Telegram settings
+const DEFAULT_TOKEN = '8710054739:AAG9Be_m2mDtWfMrC9Fv2Sp693YVP_PFt90';
+const DEFAULT_CHAT = '1148446271';
+document.getElementById('tg-token').value = localStorage.getItem('tg_token') || DEFAULT_TOKEN;
+document.getElementById('tg-chat').value = localStorage.getItem('tg_chat') || DEFAULT_CHAT;
+document.getElementById('wa-number').value = localStorage.getItem('wa_number') || '201288885171';
+if (!localStorage.getItem('tg_token')) { localStorage.setItem('tg_token', DEFAULT_TOKEN); localStorage.setItem('tg_chat', DEFAULT_CHAT); }
+if (!localStorage.getItem('wa_number')) { localStorage.setItem('wa_number', '201288885171'); }
+// Always start on main tab
+showTab('main');
+</script>
+</body>
+</html>
