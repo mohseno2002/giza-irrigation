@@ -256,8 +256,7 @@ body::before {
     display:none; flex:1; overflow-y:auto;
   }
   .form-side.mobile-active { display:block; }
-  .chat-side { display:none; }
-  .chat-side.mobile-active { display:flex; }
+  .chat-side { display:flex; }
   .header-sub { display:none; }
   .bbl { max-width:92%; font-size:12.5px; }
 }
@@ -502,9 +501,14 @@ function switchInner(tab) {
   const isMobile = window.innerWidth <= 700;
   if (!isMobile) return;
   document.getElementById('formSide').classList.toggle('mobile-active', tab==='form');
-  document.getElementById('chatSide').classList.toggle('mobile-active', tab==='chat');
+  // الشات دايماً ظاهر، بس الفورم بيتبدل
   document.getElementById('itab-form').classList.toggle('active', tab==='form');
   document.getElementById('itab-chat').classList.toggle('active', tab==='chat');
+  if (tab === 'form') {
+    document.getElementById('chatSide').style.display = 'none';
+  } else {
+    document.getElementById('chatSide').style.display = 'flex';
+  }
 }
 
 // After form submit, switch to chat on mobile
@@ -685,7 +689,20 @@ async function callClaude(userText, fromForm = false) {
       document.getElementById('sendBtn').disabled = false;
       return;
     }
-  } catch(e) {}
+    // إظهار الخطأ من Gemini
+    removeTypingBubble();
+    const errMsg = data.error?.message || JSON.stringify(data);
+    appendMsg('bot', '⚠️ خطأ Gemini: ' + errMsg);
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    return;
+  } catch(e) {
+    removeTypingBubble();
+    appendMsg('bot', '⚠️ خطأ اتصال: ' + e.message);
+    isTyping = false;
+    document.getElementById('sendBtn').disabled = false;
+    return;
+  }
   // Offline fallback
   const reply = getLocalReply(userText, fromForm);
   chatHistory.push({role:'assistant', content: reply});
