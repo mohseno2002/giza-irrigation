@@ -799,7 +799,7 @@ function removeTypingBubble() {
 async function callClaude(userText, fromForm = false) {
   isTyping = true;
   document.getElementById('sendBtn').disabled = true;
-  const CLAUDE_KEY = localStorage.getItem('claude_key') || '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';
+  const CLAUDE_KEY = localStorage.getItem('claude_key') || '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';
   if (!CLAUDE_KEY) {
     removeTypingBubble();
     appendMsg('bot', '⚠️ مفيش API Key! روح الإعدادات وحط Claude API Key عشان المساعد يشتغل.');
