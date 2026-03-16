@@ -1,4 +1,4 @@
-const CACHE_NAME = 'giza-irrigation-v7';
+const CACHE_NAME = 'giza-irrigation-v9';
 const URLS_TO_CACHE = [
   '/giza-irrigation/',
   '/giza-irrigation/index.html'
