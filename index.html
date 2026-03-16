@@ -837,8 +837,7 @@ async function callClaude(userText, fromForm = false) {
 
   isTyping = true;
   document.getElementById('sendBtn').disabled = true;
-  const _a='sk-ant-api03-f7UkOEf',_b='HSi9jFNR9mhX29Y_-3GxQ1uR3jmurs',_c='sp2fKzFia1v7tWYKo9g5vJLBuByAMUYf5CBDOHjxF25UZrD5Q-e5sZxAAA';
-  const CLAUDE_KEY = localStorage.getItem('claude_key') || (_a+_b+_c);
+  const CLAUDE_KEY = localStorage.getItem('claude_key') || '';
   if (!CLAUDE_KEY) {
     removeTypingBubble();
     appendMsg('bot', '⚠️ مفيش API Key! روح الإعدادات وحط Claude API Key عشان المساعد يشتغل.');
