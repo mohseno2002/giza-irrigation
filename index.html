@@ -428,11 +428,16 @@ body::before {
     <div class="setup-card">
       <h3>🤖 إعدادات المساعد الذكي (Claude AI)</h3>
       <div class="info-box" style="margin-bottom:14px">
-        عشان المساعد الذكي يشتغل، محتاج Claude API Key من Anthropic.<br>
-        روح على <b>console.anthropic.com</b> ← API Keys ← Create Key
+        المساعد بيشتغل عن طريق <b>وسيط آمن</u> — المفتاح محفوظ على الخادم مش جوه التطبيق.<br>
+        حط رابط الوسيط هنا بعد ما تنشره على Railway.
       </div>
       <div class="setup-field">
-        <label>Claude API Key</label>
+        <label>رابط الوسيط (Proxy URL)</label>
+        <input type="text" id="proxy-url" placeholder="https://xxxx.up.railway.app/chat" oninput="saveSettings()" dir="ltr">
+      </div>
+      <div id="proxy-url-status" style="font-size:11.5px;margin-top:6px;color:var(--green-light)"></div>
+      <div class="setup-field" style="margin-top:14px">
+        <label>Claude API Key (اختيارى — للاختبار فقط)</label>
         <input type="password" id="claude-key" placeholder="sk-ant-api03-..." oninput="saveSettings()" dir="ltr">
       </div>
       <div id="claude-key-status" style="font-size:11.5px;margin-top:6px;color:var(--green-light)"></div>
@@ -853,14 +858,18 @@ function removeTypingBubble() {
   document.getElementById('typing-bubble')?.remove();
 }
 
+// رابط الوسيط الآمن — المفتاح محفوظ على الخادم مش جوه الكود
+const PROXY_DEFAULT = 'https://giza-proxy.up.railway.app/chat';
+
 async function callClaude(userText, fromForm = false) {
   isTyping = true;
   document.getElementById('sendBtn').disabled = true;
-  const _a='sk-ant-api03-f7UkOEf',_b='HSi9jFNR9mhX29Y_-3GxQ1uR3jmurs',_c='sp2fKzFia1v7tWYKo9g5vJLBuByAMUYf5CBDOHjxF25UZrD5Q-e5sZxAAA';
-  const CLAUDE_KEY = localStorage.getItem('claude_key') || (_a+_b+_c);
-  if (!CLAUDE_KEY) {
+  const CLAUDE_KEY = (localStorage.getItem('claude_key') || '').trim();
+  const PROXY_URL = (localStorage.getItem('proxy_url') || PROXY_DEFAULT).trim();
+  const useDirect = CLAUDE_KEY.length > 0;
+  if (!useDirect && !PROXY_URL) {
     removeTypingBubble();
-    appendMsg('bot', '⚠️ مفيش API Key! روح الإعدادات وحط Claude API Key عشان المساعد يشتغل.');
+    appendMsg('bot', '⚠️ المساعد مش متظبط! روح الإعدادات وحط رابط الوسيط أو Claude API Key.');
     isTyping = false;
     document.getElementById('sendBtn').disabled = false;
     return;
@@ -871,16 +880,18 @@ async function callClaude(userText, fromForm = false) {
       role: m.role === 'assistant' ? 'assistant' : 'user',
       content: m.content
     }));
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const endpoint = useDirect ? 'https://api.anthropic.com/v1/messages' : PROXY_URL;
+    const reqHeaders = { 'Content-Type': 'application/json' };
+    if (useDirect) {
+      reqHeaders['x-api-key'] = CLAUDE_KEY;
+      reqHeaders['anthropic-version'] = '2023-06-01';
+      reqHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: reqHeaders,
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5',
         max_tokens: 400,
         system: buildSystem(),
         messages: [
@@ -902,13 +913,20 @@ async function callClaude(userText, fromForm = false) {
     // إظهار الخطأ من Claude
     removeTypingBubble();
     const errMsg = data.error?.message || JSON.stringify(data);
-    appendMsg('bot', '⚠️ خطأ: ' + errMsg);
+    let hint = '';
+    if (response.status === 400) hint = '\n(صيغة الطلب أو اسم الموديل)';
+    else if (response.status === 401 || response.status === 403) hint = '\n(صلاحيات: المفتاح غلط أو موقوف)';
+    else if (response.status === 429) hint = '\n(ضغط زائد — استنى شوية وحاول تانى)';
+    else if (response.status >= 500) hint = '\n(عطل فى الخادم أو الوسيط)';
+    appendMsg('bot', '⚠️ خطأ [HTTP ' + response.status + ']: ' + errMsg + hint);
     isTyping = false;
     document.getElementById('sendBtn').disabled = false;
     return;
   } catch(e) {
     removeTypingBubble();
-    appendMsg('bot', '⚠️ خطأ اتصال: ' + e.message);
+    let chint = '';
+    if (String(e.message).indexOf('Failed to fetch') >= 0) chint = '\n(الوسيط مش شغال أو CORS مش مسموح — راجع رابط الوسيط فى الإعدادات)';
+    appendMsg('bot', '⚠️ خطأ اتصال: ' + e.message + chint);
     isTyping = false;
     document.getElementById('sendBtn').disabled = false;
     return;
@@ -1023,10 +1041,16 @@ function saveSettings() {
   localStorage.setItem('tg_token', document.getElementById('tg-token').value);
   localStorage.setItem('tg_chat', document.getElementById('tg-chat').value);
   localStorage.setItem('wa_number', document.getElementById('wa-number').value);
+  const pu = document.getElementById('proxy-url').value.trim();
+  localStorage.setItem('proxy_url', pu);
+  document.getElementById('proxy-url-status').textContent = pu ? '✅ تم حفظ رابط الوسيط' : '';
   const ck = document.getElementById('claude-key').value.trim();
   if (ck) {
     localStorage.setItem('claude_key', ck);
     document.getElementById('claude-key-status').textContent = '✅ تم حفظ الـ API Key';
+  } else {
+    localStorage.removeItem('claude_key');
+    document.getElementById('claude-key-status').textContent = '';
   }
 }
 
@@ -1115,6 +1139,9 @@ updateStats();
 const savedClaudeKey = localStorage.getItem('claude_key') || '';
 document.getElementById('claude-key').value = savedClaudeKey;
 if (savedClaudeKey) document.getElementById('claude-key-status').textContent = '✅ تم حفظ الـ API Key';
+const savedProxy = localStorage.getItem('proxy_url');
+document.getElementById('proxy-url').value = (savedProxy === null ? PROXY_DEFAULT : savedProxy);
+if (document.getElementById('proxy-url').value) document.getElementById('proxy-url-status').textContent = '✅ رابط الوسيط محفوظ';
 
 // Load saved Telegram settings
 const DEFAULT_TOKEN = '8710054739:AAG9Be_m2mDtWfMrC9Fv2Sp693YVP_PFt90';
