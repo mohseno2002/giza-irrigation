@@ -882,7 +882,8 @@ async function callClaude(userText, fromForm = false) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-5',
-        max_tokens: 400,
+        max_tokens: 700,
+        thinking: { type: 'disabled' },
         system: buildSystem(),
         messages: [
           ...claudeHistory,
@@ -891,7 +892,9 @@ async function callClaude(userText, fromForm = false) {
       })
     });
     const data = await response.json();
-    const reply = data.content?.[0]?.text;
+    const blocks = Array.isArray(data.content) ? data.content : [];
+    const reply = blocks.filter(function (b) { return b && b.type === 'text' && b.text; })
+                        .map(function (b) { return b.text; }).join('\n').trim();
     if (reply) {
       chatHistory.push({role:'assistant', content: reply});
       removeTypingBubble();
