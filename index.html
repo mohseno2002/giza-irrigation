@@ -88,7 +88,9 @@ body::before {
 .panel.active { display:flex; }
 
 /* ─── PANEL 1: FORM + CHAT ─── */
-.form-chat { display:flex; flex:1; overflow:hidden; flex-direction:column; }
+.form-chat { display:flex; flex:1; overflow:hidden; flex-direction:row; align-items:stretch; }
+.form-chat > .form-side { min-height:0; }
+.form-chat > .chat-side { min-width:0; min-height:0; }
 
 /* Inner tabs for form/chat on mobile */
 .inner-tabs { display:none; background:rgba(13,45,66,.95); border-bottom:1px solid rgba(74,179,212,.2); flex-shrink:0; }
